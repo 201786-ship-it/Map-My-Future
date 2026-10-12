@@ -8,6 +8,8 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+st.set_page_config(page_title="MapMyFuture", layout="wide")
+
 try:
     from sarvamai import SarvamAI
 except Exception as e:
@@ -20,8 +22,6 @@ except Exception as e:
 # ============================================================
 # MAPMYFUTURE - AI CAREER PLANNER FOR HIGH SCHOOL STUDENTS
 # ============================================================
-
-st.set_page_config(page_title="MapMyFuture", layout="wide")
 
 API_KEY = None
 
@@ -829,7 +829,7 @@ if page == "Plan My Future":
         "Mining and Mine Surveying Specialized Engineering Diplomas",
         "Printing Technology and Packaging Management Diplomas",
         "Automobile and Electric Vehicle Technology Maintenance Diplomas",
-        "Animation, VFX, and Gaming Foundation Diplomas" 
+        "Animation, VFX, and Gaming Foundation Diplomas",
         "Other stream",
         "Not sure yet"
     ],                                                                                                               

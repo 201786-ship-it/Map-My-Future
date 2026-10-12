@@ -327,7 +327,7 @@ COLLEGE_SCHEMA = """
 """
 
 
-def generate_colleges(career, stream, interests, path, marks=None, income=None, tuition_budget=None):
+def generate_colleges(career, stream, interests, path, marks=None, income=None):
     profile = []
 
     if marks is not None:
@@ -919,16 +919,6 @@ if page == "Plan My Future":
             )
 
         with c5:
-            tuition_budget = st.number_input(
-                "Total tuition budget (Rs. lakh for whole course)",
-                0.0,
-                500.0,
-                10.0,
-                step=1.0,
-                help="Enter the maximum amount available for tuition for the entire course. Enter 0 if you do not want to set a limit.",
-            )
-
-        with c6:
             category = st.selectbox(
                 "Category",
                 ["General", "OBC", "SC", "ST", "EWS"],
@@ -946,15 +936,15 @@ if page == "Plan My Future":
             with st.spinner("MapMyFuture AI is planning your journey..."):
 
                 try:
-                    st.session_state["plan"] = generate_plan(
-                        stream,
-                        interests,
-                        career,
-                        marks,
-                        income=income,
-                        category=category,
-                        tuition_budget=tuition_budget,
-                    )
+                    
+                   st.session_state["plan"] = generate_plan(
+                      stream,
+                      interests,
+                      career,
+                      marks,
+                      income=income,
+                      category=category,
+                 )
 
                     st.session_state["meta"] = {
                         "name": name,
@@ -963,7 +953,6 @@ if page == "Plan My Future":
                         "interests": interests,
                         "marks": marks,
                         "income": income,
-                        "tuition_budget": tuition_budget,
                         "category": category,
                     }
 

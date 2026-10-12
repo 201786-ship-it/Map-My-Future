@@ -822,13 +822,28 @@ if page == "Plan My Future":
         c1, c2 = st.columns(2)
 
         with c1:
-            stream = st.selectbox(
-                "Stream of interest",
-                ["Arts", "Science", "Commerce", "Not sure yet"],
-                key="stream_input",
-            )
+ stream = st.selectbox(
+    "Stream of interest",
+    [
+        "Arts",
+        "Humanities",
+        "Science",
+        "Science (PCM - Physics, Chemistry, Maths)",
+        "Science (PCB - Physics, Chemistry, Biology)",
+        "Science (PCMB - Maths and Biology)",
+        "Commerce",
+        "Commerce with Maths",
+        "Commerce without Maths",
+        "Vocational Studies",
+        "Design and Creative Studies",
+        "Diploma / Polytechnic",
+        "Other stream",
+        "Not sure yet"
+    ],
+    key="stream_input",
+)
 
-        with c2:
+         with c2:
             career = st.text_input(
                 "Dream career",
                 placeholder="Example: Teacher, Software Engineer, CA",

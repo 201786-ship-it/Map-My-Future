@@ -823,7 +823,7 @@ if page == "Plan My Future":
 
         with c1:
             stream = st.selectbox(
-                "Stream of interest",
+                "Subject of interest",
                 [
                 "Arts / Humanities",
                 "Science (PCM - Physics, Chemistry, Maths)",

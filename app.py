@@ -41,6 +41,64 @@ if not API_KEY:
 client = SarvamAI(api_subscription_key=API_KEY)
 MODEL = "sarvam-105b"
 
+# ============================================================
+# MOBILE-FRIENDLY DESIGN
+# Keeps the existing desktop layout; improves phone screens.
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+    /* Keep the app readable on different screen sizes */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+        padding-left: clamp(0.75rem, 3vw, 2.5rem);
+        padding-right: clamp(0.75rem, 3vw, 2.5rem);
+        max-width: 1400px;
+    }
+
+    /* Stop long text/tables from forcing sideways scrolling */
+    .stMarkdown, .stCaption,
+    [data-testid="stMetric"],
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"] {
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    /* Make images and charts fit their containers */
+    [data-testid="stImage"] img { max-width: 100%; height: auto; }
+    [data-testid="stVegaLiteChart"], [data-testid="stPlotlyChart"] {
+        max-width: 100%;
+    }
+
+    /* The left-to-right career map scrolls instead of breaking the layout */
+    [data-testid="stGraphVizChart"] { overflow-x: auto; }
+
+    /* On phones: stack side-by-side columns so nothing is cramped */
+    @media (max-width: 640px) {
+        [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+        [data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            min-width: 100% !important;
+        }
+
+        /* Full-width, easier-to-tap buttons */
+        .stButton > button,
+        .stFormSubmitButton > button,
+        [data-testid="stBaseButton-secondary"],
+        [data-testid="stBaseButton-primary"] {
+            width: 100%;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 # Store the database next to this file, unless MAPMYFUTURE_DB overrides it.
 # Note: on Streamlit Community Cloud the filesystem is wiped on every
 # redeploy/restart, so saved plans do not survive a restart there. Point
@@ -832,7 +890,7 @@ if page == "Plan My Future":
         "Animation, VFX, and Gaming Foundation Diplomas",
         "Other stream",
         "Not sure yet"
-    ],                                                                                                               
+    ],
                 key="stream_input",
             )
 

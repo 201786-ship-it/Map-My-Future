@@ -245,7 +245,6 @@ def generate_plan(stream, interests, career, marks, change="", income=None, cate
         "student misses a cut-off or changes their mind.\n"
         "Costs are TOTAL estimates in Indian Rupees (INR) over the whole course, "
         "as plain integers.\n"
-        "Include realistic course-cost estimates and mention lower-cost alternatives where relevant.\n"
         "Only mention real, well-known colleges, exams and degrees. If unsure about "
         "a detail, keep it general.\n\n"
         "Return ONLY valid JSON in exactly this format, with no extra text:\n"
@@ -325,109 +324,74 @@ COLLEGE_SCHEMA = """
 """
 
 
-def generate_colleges(career, stream, interests, path, marks=None, income=None):
-    profile = []
-
-    if marks is not None:
-        profile.append(f"Expected marks (%): {marks}")
-
-    if income is not None:
-        profile.append(f"Family income: Rs. {income} lakh per year")
-
-    profile_text = "\n".join(profile)
-
-    fit_note = ""
-
-    if marks is not None:
-        fit_note += (
-            f"The student expects around {marks}%. Recommend institutions whose "
-            "typical cut-offs are realistic for these marks, and say so in the "
-            "reason. Include at least one achievable option; do not list only the "
-            "hardest-to-enter institutions.\n"
-        )
-
-    if income is not None:
-        fit_note += (
-            "Use family income as background context and mention scholarships or lower-cost options where relevant.\n"
-        )
+def generate_colleges(
+    career, stream, interests, path,
+    marks=None, income=None, category=None
+):
+    """Generate course-appropriate colleges using marks, income and category."""
+    profile_text = (
+        f"Expected marks (%): {marks if marks is not None else 'not provided'}\n"
+        f"Family income: Rs. {income} lakh per year\n"
+        f"Category: {category or 'not specified'}\n"
+    )
 
     prompt = (
-        "You are an expert university and college counsellor for Indian students.\n\n"
-        f"Student's Class 11 stream: {stream}\n"
+        "You are an expert college and university counsellor for Indian students.\n\n"
+        f"Student stream: {stream}\n"
         f"Student interests: {interests}\n"
         f"Dream career: {career}\n"
-        f"{profile_text}\n"
+        f"{profile_text}"
         f"Selected pathway: {path.get('name')}\n"
         f"Path steps: {path.get('steps')}\n\n"
-
-        f"The student is in the {stream} stream. Every course and institution you "
-        f"recommend MUST be one that a {stream} stream student can actually enter. "
-        "The stream is a hard constraint: never suggest a course that needs a "
-        "different stream.\n\n"
-
-        + fit_note + "\n"
-
-        "Recommend EXACTLY 3 specific, real colleges or universities in India "
-        "and EXACTLY 3 specific, real universities or colleges abroad.\n\n"
-
-        "IMPORTANT RULES:\n"
-        "1. Give the FULL and SPECIFIC official name of every institution.\n"
-        "2. Never write generic names such as 'top college', 'good university', "
-        "'reputed college', 'college 1', 'college 2', or 'college 3'.\n"
-        "3. Every institution must actually offer a relevant course for the "
-        f"student's career that a {stream} stream student can join.\n"
-        "4. For India, give exactly 3 institutions.\n"
-        "5. For abroad, give exactly 3 institutions.\n"
-        "6. For abroad, include the country.\n"
-        "7. Use real institutions only. Do not invent universities.\n"
-        "8. Give a relevant degree/course for each institution, and make sure it "
-        f"is one a {stream} stream student is eligible for.\n"
-        "9. Keep the reason short and useful for a Class 11 student.\n"
-        "10. Do not use placeholders.\n"
-        "11. Do not return generic descriptions instead of institution names.\n"
-        "12. The recommendations MUST reflect the stream: a student from a "
-        "different stream would get different courses and institutions.\n"
-        "13. Select recommendations using the student marks and realistic total tuition costs. Put options with suitable marks fit first, and use lower tuition cost to order options with similar marks fit.\n"
-        "14. For every institution, give its type: Government, Private or Deemed "
-        "(for India), or Public or Private (for abroad).\n"
-        "15. For every institution, give an estimated total tuition for the whole "
-        "course as a plain integer in Indian Rupees (INR); for institutions "
-        "abroad, give the approximate INR equivalent. Use 0 if you are unsure.\n"
-        "16. Consider total tuition cost and include a range of more affordable and higher-cost options. Family income is context only and must not be treated as a tuition limit.\n"
-        "17. For every institution, give the typical cut-off or minimum marks "
-        "(as a percentage) needed for admission to the course; use 0 if unsure.\n\n"
-
-        "Return ONLY valid JSON in exactly this format, with no extra text:\n"
-        + COLLEGE_SCHEMA
+        "Recommend EXACTLY 3 real institutions in India and EXACTLY 3 real institutions abroad.\n"
+        "Follow this JSON schema exactly:\n"
+        f"{COLLEGE_SCHEMA}\n\n"
+        "RULES:\n"
+        "1. Use full official institution names; never use placeholders.\n"
+        "2. Only recommend courses for which this student's stream and prerequisites are suitable.\n"
+        "3. Use the student's marks to provide a mix of realistic/achievable options and at most some ambitious options. Never present an estimated cutoff as guaranteed admission.\n"
+        "4. Give estimated total tuition for the full course in INR as an integer; for abroad, give an approximate INR equivalent. Use 0 if unknown.\n"
+        "5. Give typical cutoff/minimum marks as a percentage when meaningful; use 0 if unknown. Do not invent certainty.\n"
+        "6. Family income is Rs. " + str(income) + " lakh per year. Use this to prioritise lower-cost government/public institutions, affordable options and relevant scholarships/fee waivers. Do not treat annual family income as a tuition budget or guarantee that the family can pay the same amount as income.\n"
+        "7. Include affordable choices before expensive choices where admission fit is similar. Do not recommend only expensive private or overseas institutions to a lower-income family.\n"
+        "8. Consider category " + str(category or 'not specified') + " when explaining potentially relevant reservation or scholarship routes, but do not invent eligibility or category-specific cutoffs.\n"
+        "9. For India, type must be Government, Private or Deemed. For abroad, type must be Public or Private. Include country for every abroad institution.\n"
+        "10. Abroad tuition is not the full cost of studying; note that living costs, travel, visa and insurance are extra.\n"
+        "11. Keep reasons concise and useful for a high-school student.\n"
+        "12. Return ONLY valid JSON matching the schema, with no extra text."
     )
 
     result = ask_json(prompt)
-
     if not result.get("india"):
         raise ValueError("AI did not return Indian colleges.")
-
     if not result.get("abroad"):
         raise ValueError("AI did not return abroad universities.")
-
     return result
 
 
-def rank_college_options(options, marks):
-    """Prioritise colleges whose estimated cut-offs fit the student's marks, then lower tuition."""
+def rank_college_options(options, marks, income=None):
+    """Rank by estimated marks fit, then relative affordability; unknown fees are not free."""
     marks = float(marks or 0)
+    income_rupees = float(income or 0) * 100000
 
     def score(option):
         cutoff = to_int(option.get("cutoff"))
         tuition = to_int(option.get("tuition"))
-        if cutoff and marks >= cutoff:
-            marks_fit = 0
-        elif not cutoff:
-            marks_fit = 1
+
+        if cutoff > 0 and marks >= cutoff:
+            marks_fit = 0  # estimated cutoff met
+        elif cutoff > 0:
+            marks_fit = 2  # marks may be below estimate
         else:
-            marks_fit = 2
-        # Missing tuition is shown after options with a known estimated fee.
-        cost_score = tuition if tuition > 0 else float("inf")
-        return (marks_fit, cost_score)
+            marks_fit = 1  # cutoff unknown
+
+        # Use annualised tuition only as a comparison aid, not an eligibility limit.
+        if tuition > 0 and income_rupees > 0:
+            affordability = (tuition / 4) / income_rupees
+        else:
+            affordability = float("inf")
+
+        return (marks_fit, affordability, tuition if tuition > 0 else float("inf"))
 
     return sorted(options or [], key=score)
 
@@ -784,7 +748,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigation",
-        ["Plan My Future", "Career Quiz", "AI Counsellor", "Saved Plans", "About"],
+        ["Plan My Future", "Career Quiz", "Pocket Planner", "Subjects", "AI Counsellor", "Saved Plans", "About"],
         key="page_selector",
     )
 
@@ -826,49 +790,49 @@ if page == "Plan My Future":
         with c1:
             stream = st.selectbox(
                 "Stream of interest",
-                [
-                "Arts / Humanities",
-                "Science (PCM - Physics, Chemistry, Maths)",
-                "Science (PCB - Physics, Chemistry, Biology)",
-                "Science (PCMB - Maths and Biology)",
-                "Commerce with Maths",
-                "Commerce without Maths",
-                "Vocational Studies",
-                "Design and Creative Studies",
-                "Polytechnic / Diploma Courses (Engineering)",
-                "Polytechnic Diploma Courses (Non-Engineering)",
-                "ITI (Industrial Training Institute) Courses",
-                "Paramedical and Healthcare Diplomas (DMLT, X-Ray Tech, Nursing Assistant)",
-                "Hospitality and Hotel Management Diplomas",
-                "Travel, Tourism, and Aviation Management",
-                "Merchant Navy Pre-Sea Training / Ratings Courses",
-                "Defense Services Entry Routes (Agniveer Schemes / Army / Navy / Air Force)",
-                "Agricultural, Horticulture, and Organic Farming Programs",
-                "Open Schooling Paths (NIOS - National Institute of Open Schooling)",
-                "Government Skill Development Certificate Programs (PMKVY / NAPS)",
-                "Fine Arts, Performing Arts, and Music Streams (Dedicated State Board / Visual Art Electives)",
-                "Pure Languages, Linguistics, and Foreign Language Specialized Certificates",
-                "Theological Studies, Vedic Studies, and Religious Education Streams",
-                "Sports Stream / Specialized Sports Schools (Recognised by National/State Sports Authorities)",
-                "Integrated 5-Year Dual-Degree Stream (Direct Admission into BBA+MBA / Integrated Law after 10th via specialized universities)",
-                "International Education Streams (Cambridge IGCSE / International Baccalaureate - IB Diploma)",
-                "Law and Legal Studies Streams (Dedicated 11th–12th Legal Studies Elective)",
-                "Media, Mass Communication, and Journalism Foundation Certificates",
-                "Home Science and Domestic Management Specialized Streams",
-                "Information Technology and Software Development Specialized Diplomas",
-                "Chartered Accountancy (CA) Foundation Route (Direct registration eligibility post-10th)",
-                "Beauty, Cosmetology, and Wellness Diploma Streams",
-                "Apparel, Textile, and Fashion Design Vocational Streams",
-                "Library and Information Science Foundation Certificate",
-                "Veterinary and Animal Husbandry Diplomas (Diplo. in Animal Health/Dairy Technology)",
-                "Marine Engineering and Nautical Science Diplomas",
-                "Mining and Mine Surveying Specialized Engineering Diplomas",
-                "Printing Technology and Packaging Management Diplomas",
-                "Automobile and Electric Vehicle Technology Maintenance Diplomas",
-                "Animation, VFX, and Gaming Foundation Diplomas",
-                "Other stream",
-                "Not sure yet"
-                ],
+    [
+        "Arts / Humanities",
+        "Science (PCM - Physics, Chemistry, Maths)",
+        "Science (PCB - Physics, Chemistry, Biology)",
+        "Science (PCMB - Maths and Biology)",
+        "Commerce with Maths",
+        "Commerce without Maths",
+        "Vocational Studies",
+        "Design and Creative Studies",
+        "Polytechnic / Diploma Courses (Engineering)",
+        "Polytechnic Diploma Courses (Non-Engineering)",
+        "ITI (Industrial Training Institute) Courses",
+        "Paramedical and Healthcare Diplomas (DMLT, X-Ray Tech, Nursing Assistant)",
+        "Hospitality and Hotel Management Diplomas",
+        "Travel, Tourism, and Aviation Management",
+        "Merchant Navy Pre-Sea Training / Ratings Courses",
+        "Defense Services Entry Routes (Agniveer Schemes / Army / Navy / Air Force)",
+        "Agricultural, Horticulture, and Organic Farming Programs",
+        "Open Schooling Paths (NIOS - National Institute of Open Schooling)",
+        "Government Skill Development Certificate Programs (PMKVY / NAPS)",
+        "Fine Arts, Performing Arts, and Music Streams (Dedicated State Board / Visual Art Electives)",
+        "Pure Languages, Linguistics, and Foreign Language Specialized Certificates",
+        "Theological Studies, Vedic Studies, and Religious Education Streams",
+        "Sports Stream / Specialized Sports Schools (Recognised by National/State Sports Authorities)",
+        "Integrated 5-Year Dual-Degree Stream (Direct Admission into BBA+MBA / Integrated Law after 10th via specialized universities)",
+        "International Education Streams (Cambridge IGCSE / International Baccalaureate - IB Diploma)",
+        "Law and Legal Studies Streams (Dedicated 11th–12th Legal Studies Elective)",
+        "Media, Mass Communication, and Journalism Foundation Certificates",
+        "Home Science and Domestic Management Specialized Streams",
+        "Information Technology and Software Development Specialized Diplomas",
+        "Chartered Accountancy (CA) Foundation Route (Direct registration eligibility post-10th)",
+        "Beauty, Cosmetology, and Wellness Diploma Streams",
+        "Apparel, Textile, and Fashion Design Vocational Streams",
+        "Library and Information Science Foundation Certificate",
+        "Veterinary and Animal Husbandry Diplomas (Diplo. in Animal Health/Dairy Technology)",
+        "Marine Engineering and Nautical Science Diplomas",
+        "Mining and Mine Surveying Specialized Engineering Diplomas",
+        "Printing Technology and Packaging Management Diplomas",
+        "Automobile and Electric Vehicle Technology Maintenance Diplomas",
+        "Animation, VFX, and Gaming Foundation Diplomas" 
+        "Other stream",
+        "Not sure yet"
+    ],                                                                                                               
                 key="stream_input",
             )
 
@@ -906,7 +870,6 @@ if page == "Plan My Future":
                 step=0.5,
             )
 
-
         with c5:
             category = st.selectbox(
                 "Category",
@@ -930,8 +893,6 @@ if page == "Plan My Future":
                         interests,
                         career,
                         marks,
-                        income=income,
-                        category=category,
                     )
 
                     st.session_state["meta"] = {
@@ -1085,9 +1046,12 @@ if page == "Plan My Future":
         st.subheader("🎓 Specific Colleges & Universities")
 
         st.write(
-            "College and university options are ordered by marks fit and estimated tuition cost. Estimates are not official cut-offs or fee quotes."
+            "Get specific college and university names in India and abroad "
+            "ranked using marks fit and estimated tuition affordability."
         )
-        st.caption(f"Your expected marks: {meta.get('marks', 0)}%. Options are ordered by marks fit, then estimated tuition cost.")
+        st.caption(
+            "Fees and cut-offs are estimates. Family income is used to prioritise affordable options, not as a fixed tuition budget."
+        )
 
         college_cache = st.session_state.setdefault(
             "college_recommendations",
@@ -1101,7 +1065,7 @@ if page == "Plan My Future":
             f"{meta.get('stream')}|"
             f"{meta.get('interests', '')}|"
             f"{meta.get('marks')}|"
-            f"{meta.get('income')}"
+            f"{meta.get('income')}|{meta.get('category')}"
         )
 
         if st.button(
@@ -1122,6 +1086,7 @@ if page == "Plan My Future":
                         path,
                         marks=meta.get("marks"),
                         income=meta.get("income"),
+                        category=meta.get("category"),
                     )
 
                 except Exception as e:
@@ -1145,6 +1110,7 @@ if page == "Plan My Future":
             india_colleges = rank_college_options(
                 college_data.get("india", []),
                 meta.get("marks", 0),
+                meta.get("income", 0),
             )
 
             for college in india_colleges:
@@ -1165,15 +1131,21 @@ if page == "Plan My Future":
 
                 col_tuition = to_int(college.get('tuition'))
 
+
                 col_cutoff = to_int(college.get('cutoff'))
                 student_marks = to_int(meta.get("marks", 0))
 
-                if col_cutoff and student_marks >= col_cutoff:
-                    marks_text = " — marks meet the stated cutoff estimate"
-                elif col_cutoff:
-                    marks_text = " — marks may be below the stated cutoff"
+                if col_cutoff and student_marks and student_marks >= col_cutoff:
+
+                    marks_text = " - within reach on marks"
+
+                elif col_cutoff and student_marks:
+
+                    marks_text = " - above your marks"
+
                 else:
-                    marks_text = " — cutoff not verified; check official criteria"
+
+                    marks_text = ""
 
                 st.write(
                     f"**Estimated tuition:** "
@@ -1197,6 +1169,7 @@ if page == "Plan My Future":
             abroad_colleges = rank_college_options(
                 college_data.get("abroad", []),
                 meta.get("marks", 0),
+                meta.get("income", 0),
             )
 
             for university in abroad_colleges:
@@ -1222,15 +1195,21 @@ if page == "Plan My Future":
 
                 col_tuition = to_int(university.get('tuition'))
 
+
                 col_cutoff = to_int(university.get('cutoff'))
                 student_marks = to_int(meta.get("marks", 0))
 
-                if col_cutoff and student_marks >= col_cutoff:
-                    marks_text = " — marks meet the stated cutoff estimate"
-                elif col_cutoff:
-                    marks_text = " — marks may be below the stated cutoff"
+                if col_cutoff and student_marks and student_marks >= col_cutoff:
+
+                    marks_text = " - within reach on marks"
+
+                elif col_cutoff and student_marks:
+
+                    marks_text = " - above your marks"
+
                 else:
-                    marks_text = " — cutoff not verified; check official criteria"
+
+                    marks_text = ""
 
                 st.write(
                     f"**Estimated tuition:** "
@@ -1819,6 +1798,89 @@ elif page == "Saved Plans":
                     )
 
 
+
+# ============================================================
+# PAGE: POCKET PLANNER
+# ============================================================
+
+elif page == "Pocket Planner":
+
+    st.title("Pocket Planner")
+    st.write("Plan everyday student expenses and see how much you may have left each month.")
+    st.caption("This is a monthly spending planner, not a tuition-budget limit. Enter estimates in rupees.")
+
+    p1, p2 = st.columns(2)
+    with p1:
+        monthly_money = st.number_input("Monthly allowance / money available (Rs.)", min_value=0, value=3000, step=500, key="pocket_monthly_money")
+        food = st.number_input("Food and snacks (Rs. / month)", min_value=0, value=1000, step=100, key="pocket_food")
+        transport = st.number_input("Transport (Rs. / month)", min_value=0, value=500, step=100, key="pocket_transport")
+    with p2:
+        study = st.number_input("Books and study materials (Rs. / month)", min_value=0, value=300, step=100, key="pocket_study")
+        personal = st.number_input("Personal / other expenses (Rs. / month)", min_value=0, value=500, step=100, key="pocket_personal")
+        savings_goal = st.number_input("Monthly savings goal (Rs.)", min_value=0, value=500, step=100, key="pocket_savings_goal")
+
+    expenses = int(food + transport + study + personal)
+    balance = int(monthly_money - expenses)
+    st.divider()
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Estimated monthly expenses", inr(expenses))
+    m2.metric("Money left", inr(balance))
+    m3.metric("Estimated yearly expenses", inr(expenses * 12))
+
+    if balance < 0:
+        st.warning("Your estimated expenses are higher than the money available. Review the amounts or discuss a realistic plan with a parent/guardian.")
+    elif balance >= savings_goal:
+        st.success(f"Your estimated balance can cover your savings goal of {inr(savings_goal)} per month.")
+    else:
+        st.info(f"You may be short of your savings goal by {inr(savings_goal - balance)} per month.")
+
+    st.subheader("Simple saving ideas")
+    st.markdown("""
+- Track small purchases for one week.
+- Compare student discounts before paying.
+- Set aside savings after essential expenses.
+- Discuss large education expenses with a parent/guardian and check official scholarships.
+""")
+
+
+# ============================================================
+# PAGE: SUBJECTS
+# ============================================================
+
+elif page == "Subjects":
+
+    st.title("Subjects Guide")
+    st.write("Explore common subjects for school classes and the usual subject combinations after Class 10.")
+    school_class = st.selectbox("Choose your class", ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12"])
+
+    subject_data = {
+        "Class 6": ["English", "Mathematics", "Science", "Social Science", "Second Language", "Computer / ICT (if offered)"],
+        "Class 7": ["English", "Mathematics", "Science", "Social Science", "Second Language", "Computer / ICT (if offered)"],
+        "Class 8": ["English", "Mathematics", "Science", "Social Science", "Second Language", "Computer / ICT (if offered)"],
+        "Class 9": ["English", "Mathematics", "Science", "Social Science", "Second Language", "Optional / skill subject (school dependent)"],
+        "Class 10": ["English", "Mathematics", "Science", "Social Science", "Second Language", "Optional / skill subject (school dependent)"],
+        "Class 11": ["Choose a stream and check your school's available subject combinations."],
+        "Class 12": ["Continue the subjects and combination offered by your board and school; check eligibility for the courses you may apply to."],
+    }
+    st.subheader(f"Common subjects — {school_class}")
+    for subject in subject_data[school_class]:
+        st.write(f"- {subject}")
+
+    if school_class in ["Class 11", "Class 12"]:
+        stream_choice = st.selectbox("Explore a subject combination", ["Science (PCM)", "Science (PCB)", "Science (PCMB)", "Commerce with Maths", "Commerce without Maths", "Arts / Humanities", "Vocational / Skill-based"])
+        combinations = {
+            "Science (PCM)": "Physics, Chemistry, Mathematics, English, and an optional subject such as Computer Science.",
+            "Science (PCB)": "Physics, Chemistry, Biology, English, and an optional subject offered by your school.",
+            "Science (PCMB)": "Physics, Chemistry, Mathematics, Biology, English; this is a demanding combination for many students.",
+            "Commerce with Maths": "Accountancy, Business Studies, Economics, Mathematics / Applied Mathematics, and English (school offerings vary).",
+            "Commerce without Maths": "Accountancy, Business Studies, Economics, English, and an optional subject (school offerings vary).",
+            "Arts / Humanities": "Possible subjects include History, Political Science, Geography, Sociology, Psychology, Economics, and languages; availability varies.",
+            "Vocational / Skill-based": "Subjects depend on the recognised vocational course, school and board; check the official syllabus and progression options.",
+        }
+        st.info(combinations[stream_choice])
+        st.caption("Subject availability and combinations differ by school and board. Confirm your school's official subject list and the eligibility requirements for future courses.")
+
+
 # ============================================================
 # PAGE: ABOUT
 # ============================================================
@@ -1826,6 +1888,7 @@ elif page == "Saved Plans":
 elif page == "About":
 
     st.title("About MapMyFuture")
+    st.caption("Created by Gaurvi, Madhav, Aarohi, and Naisha.")
 
     st.markdown("""
 MapMyFuture is an AI-powered visual career-planning app for high school students.
@@ -1846,7 +1909,9 @@ may cost and how you can reduce that cost.
    and click **Generate my map**.
 3. Explore the pathways, costs, colleges, scholarships and the mini simulation.
 4. Ask any follow-up question in **AI Counsellor**.
-5. Click **Save this plan** to open it again later from **Saved Plans**.
+5. Use **Pocket Planner** to estimate everyday student expenses and savings.
+6. Use **Subjects** to explore common school subjects and stream combinations.
+7. Click **Save this plan** to open it again later from **Saved Plans**.
 
 ### What each feature does
 - **Career map:** A visual mind map of 2 to 3 different pathways from Class 11 to
@@ -1871,7 +1936,12 @@ may cost and how you can reduce that cost.
   money, and it plans new routes that fit your new situation.
 - **AI Counsellor:** A chat assistant that knows your plan. You can write in
   English, Hindi or another Indian language and it replies in the same language.
+- **Pocket Planner:** Estimate monthly student expenses, remaining money and a savings goal.
+- **Subjects:** Explore common subjects for Classes 6–12 and typical Class 11–12 stream combinations.
 - **Saved Plans:** Keep your plans and come back to them any time.
+
+### Creators
+**Gaurvi, Madhav, Aarohi, and Naisha**
 
 ### Please remember
 - All results are generated by AI. Costs, fees, cut-offs, scholarships and course

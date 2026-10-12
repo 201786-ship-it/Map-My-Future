@@ -812,7 +812,7 @@ if page == "Plan My Future":
     ):
         st.rerun()
 
-    with st.form("plan_form"):
+     with st.form("plan_form"):
 
         name = st.text_input(
             "Your name",
@@ -823,7 +823,7 @@ if page == "Plan My Future":
 
         with c1:
             stream = st.selectbox(
-    "Subject of interest",
+                "Stream of interest",
     [
         "Arts / Humanities",
         "Science (PCM - Physics, Chemistry, Maths)",
@@ -866,11 +866,11 @@ if page == "Plan My Future":
         "Animation, VFX, and Gaming Foundation Diplomas" 
         "Other stream",
         "Not sure yet"
-    ],
-    key="stream_input",
-)
+    ],                                                                                                               
+                key="stream_input",
+            )
 
-         with c2:
+        with c2:
             career = st.text_input(
                 "Dream career",
                 placeholder="Example: Teacher, Software Engineer, CA",

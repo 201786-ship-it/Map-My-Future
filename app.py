@@ -7,7 +7,15 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-from sarvamai import SarvamAI
+
+try:
+    from sarvamai import SarvamAI
+except Exception as e:
+    import streamlit as st
+    st.error("Sarvam AI import failed")
+    st.code(f"{type(e).__name__}: {e}")
+    st.stop()
+
 
 # ============================================================
 # MAPMYFUTURE - AI CAREER PLANNER FOR HIGH SCHOOL STUDENTS

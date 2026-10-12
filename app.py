@@ -29,7 +29,7 @@ try:
     API_KEY = st.secrets.get("SARVAM_API_KEY")
 except Exception:
     API_KEY = None
-
+    
 if not API_KEY:
     API_KEY = os.getenv("SARVAM_API_KEY")
 
@@ -822,7 +822,7 @@ if page == "Plan My Future":
         c1, c2 = st.columns(2)
 
         with c1:
- stream = st.selectbox(
+            stream = st.selectbox(
     "Stream of interest",
     [
         "Arts",

@@ -201,7 +201,7 @@ PLAN_SCHEMA = """
 """
 
 
-def generate_plan(stream, interests, career, marks, change="", income=None, category=None, previous=None):
+def generate_plan(stream, interests, career, marks, change="", income=None, category=None, previous=None, tuition_budget=None):
     situation = ""
 
     if change:
@@ -237,6 +237,7 @@ def generate_plan(stream, interests, career, marks, change="", income=None, cate
         f"Dream career: {career}\n"
         f"Expected marks (%): {marks}\n"
         + (f"Family income: Rs. {income} lakh per year\n" if income is not None else "")
+        + (f"Maximum total tuition budget for the whole course: Rs. {tuition_budget} lakh\n" if tuition_budget is not None else "")
         + (f"Category: {category}\n" if category else "")
         + "\n"
         + situation
@@ -245,6 +246,8 @@ def generate_plan(stream, interests, career, marks, change="", income=None, cate
         "student misses a cut-off or changes their mind.\n"
         "Costs are TOTAL estimates in Indian Rupees (INR) over the whole course, "
         "as plain integers.\n"
+        "If a maximum total tuition budget is supplied, prioritise pathways that can fit it; clearly identify any option that exceeds it and suggest a lower-cost alternative. "
+        "Do not confuse annual family income with the tuition budget.\n"
         "Only mention real, well-known colleges, exams and degrees. If unsure about "
         "a detail, keep it general.\n\n"
         "Return ONLY valid JSON in exactly this format, with no extra text:\n"
@@ -324,7 +327,7 @@ COLLEGE_SCHEMA = """
 """
 
 
-def generate_colleges(career, stream, interests, path, marks=None, income=None):
+def generate_colleges(career, stream, interests, path, marks=None, income=None, tuition_budget=None):
     profile = []
 
     if marks is not None:
@@ -332,6 +335,9 @@ def generate_colleges(career, stream, interests, path, marks=None, income=None):
 
     if income is not None:
         profile.append(f"Family income: Rs. {income} lakh per year")
+
+    if tuition_budget is not None:
+        profile.append(f"Maximum total tuition budget for the whole course: Rs. {tuition_budget} lakh")
 
     profile_text = "\n".join(profile)
 
@@ -346,24 +352,17 @@ def generate_colleges(career, stream, interests, path, marks=None, income=None):
         )
 
     if income is not None:
-        if income <= 4:
-            fit_note += (
-                "The family income is modest: prefer affordable government or "
-                "low-fee institutions and clearly favour options the family can "
-                "pay for. Suggest costly private or abroad institutions only if "
-                "you also note the cost and available scholarships or loans.\n"
-            )
-        elif income <= 12:
-            fit_note += (
-                "The family has a moderate budget: mix affordable government "
-                "institutions with well-regarded private ones, and note rough "
-                "costs.\n"
-            )
-        else:
-            fit_note += (
-                "The family can consider higher-fee institutions, including "
-                "private and abroad options; still note rough costs.\n"
-            )
+        fit_note += (
+            "Use family income only as background context; the explicit total tuition budget, "
+            "if provided, is the main affordability limit. Mention scholarships for options that may be costly.\n"
+        )
+
+    if tuition_budget is not None:
+        fit_note += (
+            f"STRICT TUITION LIMIT: the family has set a maximum total tuition budget of Rs. {tuition_budget} lakh for the entire course. "
+            "Prioritise colleges whose whole-course tuition is within this limit. Do not treat annual family income as the tuition budget. "
+            "If an abroad option is above this limit, replace it with a more affordable realistic option where possible, and clearly label any unavoidable above-budget option.\n"
+        )
 
     prompt = (
         "You are an expert university and college counsellor for Indian students.\n\n"
@@ -401,17 +400,15 @@ def generate_colleges(career, stream, interests, path, marks=None, income=None):
         "11. Do not return generic descriptions instead of institution names.\n"
         "12. The recommendations MUST reflect the stream: a student from a "
         "different stream would get different courses and institutions.\n"
-        "13. The recommendations MUST also fit the student's marks and family "
-        "budget: different marks or a different budget would lead to different "
-        "institutions.\n"
+        "13. The recommendations MUST be selected using BOTH the student marks and the stated total tuition budget. "
+        "Put realistic marks-fit and affordable institutions first; do not merely add labels to unsuitable choices.\n"
         "14. For every institution, give its type: Government, Private or Deemed "
         "(for India), or Public or Private (for abroad).\n"
         "15. For every institution, give an estimated total tuition for the whole "
         "course as a plain integer in Indian Rupees (INR); for institutions "
         "abroad, give the approximate INR equivalent. Use 0 if you are unsure.\n"
-        "16. Keep the estimated tuition within what the family can realistically "
-        "afford from the stated income. Prefer institutions the family can pay "
-        "for; do not recommend only expensive options.\n"
+        "16. Use the explicit maximum total tuition budget if supplied. Family income is context only and is NOT the same as the amount available for tuition. "
+        "Prefer affordable options; do not recommend only expensive options.\n"
         "17. For every institution, give the typical cut-off or minimum marks "
         "(as a percentage) needed for admission to the course; use 0 if unsure.\n\n"
 
@@ -428,6 +425,23 @@ def generate_colleges(career, stream, interests, path, marks=None, income=None):
         raise ValueError("AI did not return abroad universities.")
 
     return result
+
+
+def rank_college_options(options, marks, tuition_budget_lakh):
+    """Put options matching the student's marks and tuition budget first."""
+    marks = float(marks or 0)
+    budget_lakh = float(tuition_budget_lakh or 0)
+    budget_rupees = budget_lakh * 100000 if budget_lakh > 0 else 0
+
+    def score(option):
+        cutoff = to_int(option.get("cutoff"))
+        tuition = to_int(option.get("tuition"))
+        marks_fit = 0 if cutoff and marks >= cutoff else (1 if not cutoff else 2)
+        cost_fit = 0 if budget_rupees and tuition and tuition <= budget_rupees else (1 if not budget_rupees or not tuition else 2)
+        # Affordable + marks-fit options appear first; missing figures are not treated as confirmed fits.
+        return (cost_fit, marks_fit)
+
+    return sorted(options or [], key=score)
 
 
 # ============================================================
@@ -823,7 +837,7 @@ if page == "Plan My Future":
 
         with c1:
             stream = st.selectbox(
-                "Subject of interest",
+                "Stream of interest",
                 [
                 "Arts / Humanities",
                 "Science (PCM - Physics, Chemistry, Maths)",
@@ -863,7 +877,7 @@ if page == "Plan My Future":
                 "Mining and Mine Surveying Specialized Engineering Diplomas",
                 "Printing Technology and Packaging Management Diplomas",
                 "Automobile and Electric Vehicle Technology Maintenance Diplomas",
-                "Animation, VFX, and Gaming Foundation Diplomas"
+                "Animation, VFX, and Gaming Foundation Diplomas",
                 "Other stream",
                 "Not sure yet"
                 ],
@@ -885,7 +899,7 @@ if page == "Plan My Future":
             height=100,
         )
 
-        c3, c4, c5 = st.columns(3)
+        c3, c4, c5, c6 = st.columns(4)
 
         with c3:
             marks = st.number_input(
@@ -905,6 +919,16 @@ if page == "Plan My Future":
             )
 
         with c5:
+            tuition_budget = st.number_input(
+                "Total tuition budget (Rs. lakh for whole course)",
+                0.0,
+                500.0,
+                10.0,
+                step=1.0,
+                help="Enter the maximum amount available for tuition for the entire course. Enter 0 if you do not want to set a limit.",
+            )
+
+        with c6:
             category = st.selectbox(
                 "Category",
                 ["General", "OBC", "SC", "ST", "EWS"],
@@ -927,6 +951,9 @@ if page == "Plan My Future":
                         interests,
                         career,
                         marks,
+                        income=income,
+                        category=category,
+                        tuition_budget=tuition_budget,
                     )
 
                     st.session_state["meta"] = {
@@ -936,6 +963,7 @@ if page == "Plan My Future":
                         "interests": interests,
                         "marks": marks,
                         "income": income,
+                        "tuition_budget": tuition_budget,
                         "category": category,
                     }
 
@@ -1080,8 +1108,12 @@ if page == "Plan My Future":
         st.subheader("🎓 Specific Colleges & Universities")
 
         st.write(
-            "Get specific college and university names in India and abroad "
-            "that match this career pathway."
+            "Get college and university options selected using your marks and "
+            "the maximum total tuition budget you entered. Estimates are not official cut-offs or fee quotes."
+        )
+        st.caption(
+            f"Your marks: {meta.get('marks', 0)}% · Maximum total tuition budget: "
+            f"{inr(to_int(float(meta.get('tuition_budget', 10.0) or 0) * 100000)) if float(meta.get('tuition_budget', 10.0) or 0) > 0 else 'Not set'}"
         )
 
         college_cache = st.session_state.setdefault(
@@ -1096,7 +1128,8 @@ if page == "Plan My Future":
             f"{meta.get('stream')}|"
             f"{meta.get('interests', '')}|"
             f"{meta.get('marks')}|"
-            f"{meta.get('income')}"
+            f"{meta.get('income')}|"
+            f"{meta.get('tuition_budget', 10.0)}"
         )
 
         if st.button(
@@ -1117,6 +1150,7 @@ if page == "Plan My Future":
                         path,
                         marks=meta.get("marks"),
                         income=meta.get("income"),
+                        tuition_budget=meta.get("tuition_budget", 10.0),
                     )
 
                 except Exception as e:
@@ -1137,9 +1171,10 @@ if page == "Plan My Future":
 
             st.markdown("### 🇮🇳 India")
 
-            india_colleges = college_data.get(
-                "india",
-                [],
+            india_colleges = rank_college_options(
+                college_data.get("india", []),
+                meta.get("marks", 0),
+                meta.get("tuition_budget", 10.0),
             )
 
             for college in india_colleges:
@@ -1160,34 +1195,27 @@ if page == "Plan My Future":
 
                 col_tuition = to_int(college.get('tuition'))
 
-                budget = to_int(float(meta.get("income", 0)) * 100000 * years)
+                budget_lakh = float(meta.get("tuition_budget", 10.0) or 0)
+                budget = to_int(budget_lakh * 100000) if budget_lakh > 0 else 0
 
                 if col_tuition and budget and col_tuition <= budget:
-
-                    budget_text = " - within your budget"
-
+                    budget_text = " — within your tuition budget"
                 elif col_tuition and budget:
-
-                    budget_text = " - above your budget"
-
+                    budget_text = " — ABOVE your tuition budget"
+                elif budget == 0:
+                    budget_text = " — budget limit not set"
                 else:
-
-                    budget_text = ""
+                    budget_text = " — tuition estimate unavailable"
 
                 col_cutoff = to_int(college.get('cutoff'))
                 student_marks = to_int(meta.get("marks", 0))
 
-                if col_cutoff and student_marks and student_marks >= col_cutoff:
-
-                    marks_text = " - within reach on marks"
-
-                elif col_cutoff and student_marks:
-
-                    marks_text = " - above your marks"
-
+                if col_cutoff and student_marks >= col_cutoff:
+                    marks_text = " — marks meet the stated cutoff estimate"
+                elif col_cutoff:
+                    marks_text = " — marks may be below the stated cutoff"
                 else:
-
-                    marks_text = ""
+                    marks_text = " — cutoff not verified; check official criteria"
 
                 st.write(
                     f"**Estimated tuition:** "
@@ -1209,9 +1237,10 @@ if page == "Plan My Future":
 
             st.markdown("### 🌍 Abroad")
 
-            abroad_colleges = college_data.get(
-                "abroad",
-                [],
+            abroad_colleges = rank_college_options(
+                college_data.get("abroad", []),
+                meta.get("marks", 0),
+                meta.get("tuition_budget", 10.0),
             )
 
             for university in abroad_colleges:
@@ -1237,34 +1266,27 @@ if page == "Plan My Future":
 
                 col_tuition = to_int(university.get('tuition'))
 
-                budget = to_int(float(meta.get("income", 0)) * 100000 * years)
+                budget_lakh = float(meta.get("tuition_budget", 10.0) or 0)
+                budget = to_int(budget_lakh * 100000) if budget_lakh > 0 else 0
 
                 if col_tuition and budget and col_tuition <= budget:
-
-                    budget_text = " - within your budget"
-
+                    budget_text = " — within your tuition budget"
                 elif col_tuition and budget:
-
-                    budget_text = " - above your budget"
-
+                    budget_text = " — ABOVE your tuition budget"
+                elif budget == 0:
+                    budget_text = " — budget limit not set"
                 else:
-
-                    budget_text = ""
+                    budget_text = " — tuition estimate unavailable"
 
                 col_cutoff = to_int(university.get('cutoff'))
                 student_marks = to_int(meta.get("marks", 0))
 
-                if col_cutoff and student_marks and student_marks >= col_cutoff:
-
-                    marks_text = " - within reach on marks"
-
-                elif col_cutoff and student_marks:
-
-                    marks_text = " - above your marks"
-
+                if col_cutoff and student_marks >= col_cutoff:
+                    marks_text = " — marks meet the stated cutoff estimate"
+                elif col_cutoff:
+                    marks_text = " — marks may be below the stated cutoff"
                 else:
-
-                    marks_text = ""
+                    marks_text = " — cutoff not verified; check official criteria"
 
                 st.write(
                     f"**Estimated tuition:** "
@@ -1560,6 +1582,7 @@ if page == "Plan My Future":
                             income=new_income,
                             category=meta.get("category"),
                             previous=st.session_state.get("plan"),
+                            tuition_budget=meta.get("tuition_budget", 10.0),
                         )
 
                     except Exception as e:

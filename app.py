@@ -17,22 +17,55 @@ st.set_page_config(page_title="MapMyFuture", layout="wide")
 THEME_CSS = """<style>
 
 /* ============================================================
-   MAPMYFUTURE THEME  (colours only - no layout changes)
+   MAPMYFUTURE THEME  (dark, colourful - colours only)
+   White/light text on a dark background so everything is
+   readable on every page.
    ============================================================ */
-:root {
-    --mmf-indigo: #4f46e5;
-    --mmf-violet: #7c3aed;
-    --mmf-pink:   #db2777;
-    --mmf-teal:   #0891b2;
-}
 
-/* Page background: soft indigo / pink / cyan wash */
+/* ---------- page background ---------- */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #eef2ff 0%, #fdf2f8 50%, #ecfeff 100%);
+    background:
+        radial-gradient(1200px 600px at 8% 0%, rgba(79,70,229,0.45) 0%, rgba(79,70,229,0) 60%),
+        radial-gradient(1000px 520px at 95% 12%, rgba(219,39,119,0.35) 0%, rgba(219,39,119,0) 55%),
+        linear-gradient(160deg, #0b1020 0%, #111827 100%);
+    color: #e5e7eb;
 }
 [data-testid="stHeader"] { background: transparent; }
 
-/* Sidebar: bold gradient */
+/* ---------- body text (all pages) ---------- */
+[data-testid="stMain"] p,
+[data-testid="stMain"] li,
+[data-testid="stMain"] label,
+[data-testid="stMain"] .stMarkdown,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+[data-testid="stMain"] h4,
+[data-testid="stMain"] h5,
+[data-testid="stMain"] h6 {
+    color: #e5e7eb !important;
+}
+
+/* ---------- headings ---------- */
+section.main h1, [data-testid="stMain"] h1 {
+    color: #c7d2fe;
+    font-weight: 800 !important;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    section.main h1, [data-testid="stMain"] h1 {
+        background: linear-gradient(90deg, #a5b4fc, #f0abfc, #67e8f9);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+section.main h2, [data-testid="stMain"] h2,
+section.main h3, [data-testid="stMain"] h3 {
+    color: #c7d2fe !important;
+}
+
+/* ---------- sidebar ---------- */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
 }
@@ -53,25 +86,30 @@ THEME_CSS = """<style>
     background: rgba(255,255,255,0.18);
 }
 
-/* Main headings: gradient text (with a plain-colour fallback) */
-section.main h1, [data-testid="stMain"] h1 {
-    color: #4f46e5;
-    font-weight: 800 !important;
+/* ---------- inputs / selects / text areas ---------- */
+[data-baseweb="input"],
+[data-baseweb="textarea"],
+[data-baseweb="select"] > div {
+    background: rgba(15,23,42,0.92) !important;
+    border: 1px solid #334155 !important;
+    border-radius: 10px !important;
 }
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-    section.main h1, [data-testid="stMain"] h1 {
-        background: linear-gradient(90deg, #4f46e5, #7c3aed, #db2777);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea,
+[data-baseweb="select"] div {
+    color: #ffffff !important;
 }
-section.main h2, [data-testid="stMain"] h2,
-section.main h3, [data-testid="stMain"] h3 {
-    color: #4f46e5 !important;
+[data-baseweb="input"] input::placeholder,
+[data-baseweb="textarea"] textarea::placeholder {
+    color: #94a3b8 !important;
+}
+[data-testid="stNumberInput"] button {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    border-color: #334155 !important;
 }
 
-/* Buttons */
+/* ---------- buttons ---------- */
 .stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
     background: linear-gradient(90deg, #4f46e5, #7c3aed);
     color: #ffffff !important;
@@ -79,46 +117,49 @@ section.main h3, [data-testid="stMain"] h3 {
     border-radius: 12px;
     padding: 0.5rem 1.2rem;
     font-weight: 600;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .stButton > button:hover, .stFormSubmitButton > button:hover, .stDownloadButton > button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.45);
+    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.55);
     color: #ffffff !important;
 }
+.stButton > button p, .stFormSubmitButton > button p { color: #ffffff !important; }
 
-/* Metric cards */
+/* ---------- metric cards ---------- */
 [data-testid="stMetric"] {
-    background: #ffffff;
+    background: rgba(30,41,59,0.85);
     border-radius: 16px;
     padding: 14px 18px;
-    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
     border-left: 6px solid #7c3aed;
 }
-[data-testid="stMetricValue"] { color: #4f46e5; }
-[data-testid="stMetricLabel"] { color: #6b7280; }
+[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p { color: #cbd5e1 !important; }
+[data-testid="stMetricValue"] { color: #a5b4fc !important; }
 
-/* Inputs, selects, text areas */
-[data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {
-    border-radius: 10px !important;
+/* ---------- forms, expanders, chat, tables ---------- */
+[data-testid="stForm"] {
+    background: rgba(30,41,59,0.55);
+    border: 1px solid #334155;
+    border-radius: 16px;
 }
-
-/* Expanders, alerts, chat bubbles */
 [data-testid="stExpander"] {
+    background: rgba(30,41,59,0.85);
+    border: 1px solid #334155;
     border-radius: 14px;
-    border: 1px solid #e0e7ff;
-    background: #ffffff;
 }
+[data-testid="stExpander"] summary, [data-testid="stExpander"] p { color: #e5e7eb !important; }
 [data-testid="stChatMessage"] {
+    background: rgba(30,41,59,0.85);
     border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
 }
 [data-testid="stAlert"] { border-radius: 12px; }
 
-/* Dividers */
-hr { border-color: #e0e7ff; }
+/* ---------- misc ---------- */
+hr { border-color: #334155; }
+[data-testid="stToolbar"] { color: #cbd5e1; }
 </style>"""
 
 st.markdown(THEME_CSS, unsafe_allow_html=True)

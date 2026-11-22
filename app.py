@@ -10,6 +10,119 @@ import streamlit as st
 
 st.set_page_config(page_title="MapMyFuture", layout="wide")
 
+# ============================================================
+# APP THEME (colours)
+# ============================================================
+
+THEME_CSS = """<style>
+
+/* ============================================================
+   MAPMYFUTURE THEME  (colours only - no layout changes)
+   ============================================================ */
+:root {
+    --mmf-indigo: #4f46e5;
+    --mmf-violet: #7c3aed;
+    --mmf-pink:   #db2777;
+    --mmf-teal:   #0891b2;
+}
+
+/* Page background: soft indigo / pink / cyan wash */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(135deg, #eef2ff 0%, #fdf2f8 50%, #ecfeff 100%);
+}
+[data-testid="stHeader"] { background: transparent; }
+
+/* Sidebar: bold gradient */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
+}
+[data-testid="stSidebar"] * { color: #ffffff !important; }
+[data-testid="stSidebar"] h1 {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background: none !important;
+    font-weight: 800 !important;
+}
+[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.35); }
+[data-testid="stSidebar"] [role="radiogroup"] label {
+    padding: 6px 10px;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover {
+    background: rgba(255,255,255,0.18);
+}
+
+/* Main headings: gradient text (with a plain-colour fallback) */
+section.main h1, [data-testid="stMain"] h1 {
+    color: #4f46e5;
+    font-weight: 800 !important;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    section.main h1, [data-testid="stMain"] h1 {
+        background: linear-gradient(90deg, #4f46e5, #7c3aed, #db2777);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+section.main h2, [data-testid="stMain"] h2,
+section.main h3, [data-testid="stMain"] h3 {
+    color: #4f46e5 !important;
+}
+
+/* Buttons */
+.stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 12px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stButton > button:hover, .stFormSubmitButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.45);
+    color: #ffffff !important;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+    border-left: 6px solid #7c3aed;
+}
+[data-testid="stMetricValue"] { color: #4f46e5; }
+[data-testid="stMetricLabel"] { color: #6b7280; }
+
+/* Inputs, selects, text areas */
+[data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {
+    border-radius: 10px !important;
+}
+
+/* Expanders, alerts, chat bubbles */
+[data-testid="stExpander"] {
+    border-radius: 14px;
+    border: 1px solid #e0e7ff;
+    background: #ffffff;
+}
+[data-testid="stChatMessage"] {
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+[data-testid="stAlert"] { border-radius: 12px; }
+
+/* Dividers */
+hr { border-color: #e0e7ff; }
+</style>"""
+
+st.markdown(THEME_CSS, unsafe_allow_html=True)
+
 try:
     from sarvamai import SarvamAI
 except Exception as e:

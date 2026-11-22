@@ -1870,14 +1870,20 @@ elif page == "Pocket Planner":
     p1, p2 = st.columns(2)
     with p1:
         monthly_money = st.number_input("Monthly allowance / money available (Rs.)", min_value=0, value=3000, step=500, key="pocket_monthly_money")
-        food = st.number_input("Food and snacks (Rs. / month)", min_value=0, value=1000, step=100, key="pocket_food")
-        transport = st.number_input("Transport (Rs. / month)", min_value=0, value=500, step=100, key="pocket_transport")
+        food = st.number_input("Food and snacks (Rs. / month)", min_value=0, value=None, step=100, key="pocket_food", placeholder="Optional")
+        transport = st.number_input("Transport (Rs. / month)", min_value=0, value=None, step=100, key="pocket_transport", placeholder="Optional")
+        rent = st.number_input("Rent / hostel (Rs. / month)", min_value=0, value=None, step=500, key="pocket_rent", placeholder="Optional")
     with p2:
-        study = st.number_input("Books and study materials (Rs. / month)", min_value=0, value=300, step=100, key="pocket_study")
-        personal = st.number_input("Personal / other expenses (Rs. / month)", min_value=0, value=500, step=100, key="pocket_personal")
+        study = st.number_input("Books and study materials (Rs. / month)", min_value=0, value=None, step=100, key="pocket_study", placeholder="Optional")
+        personal = st.number_input("Personal / other expenses (Rs. / month)", min_value=0, value=None, step=100, key="pocket_personal", placeholder="Optional")
+        recreation = st.number_input("Recreational expenses (Rs. / month)", min_value=0, value=None, step=100, key="pocket_recreation", placeholder="Optional")
         savings_goal = st.number_input("Monthly savings goal (Rs.)", min_value=0, value=500, step=100, key="pocket_savings_goal")
 
-    expenses = int(food + transport + study + personal)
+    # Earning and savings stay required (they have values); only expenses are optional.
+    monthly_money = monthly_money or 0
+    savings_goal = savings_goal or 0
+
+    expenses = int((food or 0) + (transport or 0) + (rent or 0) + (study or 0) + (personal or 0) + (recreation or 0))
     balance = int(monthly_money - expenses)
     st.divider()
     m1, m2, m3 = st.columns(3)
